@@ -15,25 +15,32 @@ empirical_distortion_multiplier = 0.81  # for distortion_range = (2.0, 3.0)
 
 class Shape(object):
 
-    __slots__ = ('size',)
+    # __slots__ = ('size',)
 
-    def __init__(self, size):
+    def __init__(self, size, init_name=None):
         assert isinstance(size, Point) and 0.0 < size <= 1.0
         self.size = size / 2.0
+        self.init_name = init_name
 
     def __eq__(self, other):
         return (isinstance(other, Shape) and self.name == other.name) or (isinstance(other, str) and self.name == other)
 
     @property
     def name(self):
-        return self.__class__.__name__.lower()
+        if self.init_name:
+            return self.init_name
+        else:
+            return self.__class__.__name__.lower()
 
     def model(self):
         return dict(name=self.name, size=self.size.model())
 
     @staticmethod
     def from_model(model):
-        return Shape.shapes[model['name']](size=Point.from_model(model['size']))
+        if model['name'] in Shape.shapes:
+            return Shape.shapes[model['name']](size=Point.from_model(model['size']))
+        else:
+            return Shape.shapes.get(model['name'], CustomRectangle)(size=Point.from_model(model['size']), init_name=model['name'])
 
     def copy(self):
         raise NotImplementedError
@@ -558,6 +565,49 @@ class Ellipse(Shape):
         return Ellipse(Point(size, size / distortion))
 
 
+class CustomRectangle(Shape):
+    # __slots__ = ('size',)
+
+    def __init__(self, size, init_name=None):
+        return super(CustomRectangle, self).__init__(size, init_name)
+
+    def copy(self):
+        return Rectangle(size=(self.size * 2.0))
+
+    def __contains__(self, offset):
+        return abs(offset) <= self.size
+
+    def distance(self, offset):
+        return (abs(offset) - self.size).positive().length()
+
+    def centrality(self, offset):
+        return max(((self.size - abs(offset)) / self.size).lower(), 0.0)
+
+    @property
+    def area(self):
+        return 4.0 * self.size.x * self.size.y
+
+    @staticmethod
+    def relative_area():
+        return 0.5 * empirical_distortion_multiplier
+
+    def polygon(self):
+        return (Point(-self.size.x, -self.size.y),
+                Point(self.size.x, -self.size.y),
+                Point(-self.size.x, self.size.y),
+                self.size)
+
+    @staticmethod
+    def random_instance(size_range, distortion_range):
+        distortion = uniform(*distortion_range)
+        if distortion_range[0] < distortion_range[1]:
+            distortion_ratio = (distortion - distortion_range[0]) / (distortion_range[1] - distortion_range[0])
+            min_size = size_range[0] + (size_range[1] - size_range[0]) * distortion_ratio * 0.5
+            size = quadratic_uniform(min_size, size_range[1])
+        else:
+            size = quadratic_uniform(*size_range)
+        return Rectangle(Point(size, size / distortion))
+
 Shape.shapes = dict(
     square=Square,
     rectangle=Rectangle,
@@ -566,5 +616,6 @@ Shape.shapes = dict(
     cross=Cross,
     circle=Circle,
     semicircle=Semicircle,
-    ellipse=Ellipse
+    ellipse=Ellipse,
+    other=CustomRectangle
 )

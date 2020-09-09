@@ -7,7 +7,7 @@ from random import random, randrange
 import numpy as np
 from PIL import Image
 from shapeworld import util
-
+import tqdm
 
 class Dataset(object):
 
@@ -1182,7 +1182,7 @@ class CaptionAgreementDataset(Dataset):
 
         batch = self.zero_batch(n, include_model=include_model, alternatives=alternatives)
         captions = list()
-        for i in range(n):
+        for i in tqdm.tqdm(range(n)):
             correct = random() < correct_ratio
             # print(i, correct, flush=True)
             # print(i, correct, end=', ', flush=True)

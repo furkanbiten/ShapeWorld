@@ -169,6 +169,49 @@ class WorldCaptioner(object):
                 # print('!!!!!', flush=True)
                 return None
 
+        data = {}
+        data["first_part"] = []
+        data["second_part"] = []
+        data["third_part"] = []
+        # data['predtype'] =
+        with open('/media/abiten/SSD-DATA/TLIC/caption_attr.txt', 'a') as f:
+
+            for i in predication.agreeing:
+                data['first_part'].append((i.shape.name, i.color.name, i.id))
+                #f.write(str(i) + '\t' + str(i.id))
+                #f.write('\n')
+
+            if caption.body.predtype == 'negation':
+                if caption.body.reference.predtype == 'proximity-rel':
+                    for i in predication.sub_predications[-1].sub_predications[-1:-3:-1]:
+                        for b in i.agreeing:
+                            f.write(str(b.id))
+                else:
+                    for i in predication.sub_predications[-1].sub_predications[-1].agreeing:
+                        f.write(str(i.id))
+
+            elif caption.body.predtype == 'proximity-rel':
+                #f.write('\n')
+                for i in predication.sub_predications[-1].agreeing:
+                    data['second_part'].append((i.shape.name, i.color.name, i.id))
+
+                for i in predication.sub_predications[-2].agreeing:
+                    data['third_part'].append((i.shape.name, i.color.name, i.id))
+                        #f.write(str(b)+ '\t' + str(b.id))
+                        #f.write('\n')
+
+            else:
+                for i in predication.sub_predications[-1].agreeing:
+                    data['second_part'].append((i.shape.name, i.color.name, i.id))
+            data['caption'] = self.realizer.realize([caption])[0]
+            data['predtype'] = caption.body.predtype
+            f.write(str(data))
+            f.write('\n')
+            #f.write('\n')
+            #f.write(self.realizer.realize([caption])[0])
+            #f.write('\n')
+            #f.write('\n')
+
         return caption
 
     def get_correct_caption(self):
